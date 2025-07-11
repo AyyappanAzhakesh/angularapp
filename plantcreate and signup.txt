@@ -1,0 +1,325 @@
+<div class="d-flex justify-content-end align-items-center w-100 vh-100" style="background-image: url('assets/images/background.webp'); background-size: cover;">
+    <div class="card shadow-lg p-4 m-4" style="max-width: 500px; width: 100%; background-color: rgba(255, 255, 255, 0.9);">
+        <h4 class="text-center mb-4">Add New Plant</h4>
+
+        <form [formGroup]="plantForm" (ngSubmit)="onSubmit()">
+            <div class="mb-3 form-group">
+                <label for="" class="form-label">Plant Name</label>
+                <input type="text" class="from-control" formControlName="plantName" />
+                <div *ngIf="plantForm.get('plantName')?.touched && plantForm.get('plantName')?.invalid" class=" small text-danger">Plant Name is required</div>
+            </div>
+
+            <div class="mb-3 form-group">
+                <label for="" class="form-label">Description</label>
+                <input type="text" name="description" id="description" formControlName="description"  />
+                <div *ngIf="plantForm.get('description')?.touched && plantForm.get('description')?.invalid" class="small text-danger">Description is required</div>
+            </div>
+
+            <div class="mb-3 form-group">
+                <label for="" class="form-label">Price</label>
+                <input type="number" class="from-control" formControlName="price" required />
+                <div *ngIf="plantForm.get('price')?.touched && plantForm.get('price')?.invalid" class="small text-danger">Price must be at least 1.</div>
+            </div>
+
+            <div class="mb-3 form-group">
+                <label for="" class="form-label">Stock Quantity</label>
+                <input type="text" class="from-control" formControlName="stockQuantity" />
+                <div *ngIf="plantForm.get('stockQuantity')?.touched && plantForm.get('stockQuantity')?.invalid" class="small text-danger">Quantity must be at least 1.</div>
+            </div>
+
+            <div class="mb-3 form-group">
+                <label for="" class="form-label">Category</label>
+                <select name="category" class="form-select" formControlName="category" id="">
+                    <option value="" selected disabled>Select Category</option>
+                    <option *ngFor="let c of categories" [value]="c">{{c}}</option>
+                </select>
+                <div *ngIf="plantForm.get('category')?.touched && plantForm.get('category')?.invalid" class="small text-danger">Category is required</div>
+            </div>
+
+            <div class="mb-3 form-group">
+                <label for="" class="form-label">Cover Image</label>
+                <input type="file" class="from-control" (change)="onFileChange($event)" />
+                <div class="small text-danger" *ngIf="imageError">{{imageError}}</div>
+            </div>
+
+            <button class="btn btn-success w-100" [disabled]="plantForm.invalid" type="submit" (click)="opensubmitModalModal()" >Add Plant</button>
+        </form>
+    </div>
+</div>
+
+<!-- <div #submitModal class="modal fade" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-body text-center">
+                <p class="fw-bold text-dark mb-3" >Plant Added successfully!</p>
+                <button class="btn btn-success" (click)="closeSubmitModal()" >Ok</button>
+            </div>
+        </div>
+    </div>
+</div> -->
+
+//ts
+
+import { Component, ElementRef, OnInit, Renderer2, ViewChild } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+
+@Component({
+  selector: 'app-plant-create',
+  templateUrl: './plant-create.component.html',
+  styleUrls: ['./plant-create.component.css']
+})
+export class PlantCreateComponent implements OnInit {
+
+  plantForm !: FormGroup;
+  categories = ['indoor', 'outdoor', 'flowering', 'succulent'];
+  coverImageBase64: string | null = null;
+  imageError: string = '';
+  @ViewChild('submitModal') submitModalRef!:ElementRef;
+
+  constructor(private fb: FormBuilder, private renderer: Renderer2) {
+    this.plantForm = this.fb.group({
+      plantName:['', Validators.required],
+      description:['', Validators.required],
+      price:[null, [Validators.required, Validators.min(1)]],
+      stockQuantity:[0, [Validators.required, Validators.min(1)]],
+      category:['', Validators.required],
+      coverImage:[null, Validators.required]
+    });
+   }
+
+   onFileChange(event: any){
+    const file = event.target.files[0];
+    if(!file){
+      this.imageError = 'File is required';
+      return;
+    }
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if(!allowedTypes.includes(file.type)){
+      this.imageError = 'Only JPG, JPEG or PNG formats are allowed.';
+      this.plantForm.get('coverImage')?.setErrors({invalidType: true});
+      true;
+    }
+
+    if(file.size > 5 * 2024 * 1024){
+      this.imageError = 'File size should not exceed 5MB.';
+      this.plantForm.get('coverImage')?.setErrors({fileTooLarge: true});
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.coverImageBase64 = reader.result as string;
+      this.plantForm.patchValue({coverImage: this.coverImageBase64});
+      this.imageError = '';
+    };
+    reader.readAsDataURL(file);
+   }
+
+   onSubmit(){
+    if(this.plantForm.valid){
+      const formdata = this.plantForm.value;
+      formdata.coverImage = this.coverImageBase64;
+      console.log('Form data: ', this.plantForm.value);
+      this.plantForm.reset();
+    }
+
+   }
+
+  ngOnInit(): void {
+  }
+
+  opensubmitModalModal():void{
+    const modalElement = this.submitModalRef.nativeElement;
+    this.renderer.addClass(modalElement, 'show');
+    this.renderer.setStyle(modalElement, 'display', 'block');
+    this.renderer.setStyle(modalElement, 'backgroundColor', 'rgba(0, 0, 0, 0.5');
+    this.renderer.setAttribute(modalElement, 'aria-modal', 'true');
+    this.renderer.removeAttribute(modalElement, 'aria-hidden');
+  }
+
+  closeSubmitModal():void{
+    const modalElement = this.submitModalRef.nativeElement;
+    this.renderer.removeClass(modalElement, 'show');
+    this.renderer.setStyle(modalElement, 'display', 'none');
+    this.renderer.setAttribute(modalElement, 'aria-hidden', 'true');
+    this.renderer.removeAttribute(modalElement, 'aria-modal');
+  }
+
+}
+
+// signup.html
+
+<div class="contain d-flex justify-content-center align-items-center w-100 vh-100">
+    <div class="container-fluid min-vh-100 ww d-flex align-items-center justify-content-center bg-light">
+        <div class="row shadow rounded overflow-hidden login-wrapper" style="height: 95vh;">
+            <div class="col-md-6 d-none d-md-block p-0">
+                <img src="assets/images/login.png" alt="Login" class="img-fluid h-100 w-100 object-fit-cover login-image" />
+            </div>
+    
+            <div class="col-md-6 custom bg-white d-flex flex-column justify-content-center align-item-center">
+                <div class="text-center">
+                    <img src="assets/images/logo.png" alt="log" width="60" />
+                    <h4 class="mt">NurseryPro</h4>
+                    <p class="text-muted">SignUp</p>
+                </div>
+    
+                <form (ngSubmit)="handleSignup()" novalidate>
+
+                    <div class="form-group mb-1">
+                        <input placeholder="Username" type="text" [(ngModel)]="formData.username" name="username" (blur)="validateField('username', formData.username)" required class="form-control p-1" />
+                        <small class="text-danger mb-0" *ngIf="errors?.username">{{errors.username}}</small>
+                    </div>
+
+                    <div class="form-group mb-1">
+                        <input placeholder="Email" type="email" [(ngModel)]="formData.email" name="email" (blur)="validateField('email', formData.email)" required class="form-control p-1" />
+                        <small class="text-danger" *ngIf="errors?.email">{{errors.email}}</small>
+                    </div>
+
+                    <div class="form-group mb-1">
+                        <input placeholder="Mobile" type="tel" [(ngModel)]="formData.mobile" name="mobile" (blur)="validateField('mobile', formData.mobile)" required class="form-control p-1" />
+                        <small class="text-danger" *ngIf="errors?.mobile">{{errors.mobile}}</small>
+                    </div>
+    
+                    <div class="form-group mb-1">
+                        <input placeholder="Password" type="password" [(ngModel)]="formData.password" name="password" (blur)="validateField('password', formData.password)" required class="form-control p-1" />
+                        <small class="text-danger m- 0" *ngIf="errors?.password">{{errors.password}}</small>
+                    </div>
+
+                    <div class="form-group mb-1">
+                        <input placeholder="Confirm Password" type="password" [(ngModel)]="formData.confirmPassword" name="confirmPassword" (blur)="validateField('confirmPassword', formData.confirmPassword)" required class="form-control p-1" />
+                        <small class="text-danger" *ngIf="errors?.confirmPassword">{{errors.confirmPassword}}</small>
+                    </div>
+
+                    <div class="form-group mb-1">
+                        <select name="role" id="role" [(ngModel)]="formData.role" (blur)="validateField('role', formData.role)" required class="form-select p-1">
+                            <option value="" disabled selected>Select Role</option>
+                            <option value="Admin">Admin</option>
+                            <option value="User">User</option>
+                        </select>
+                        <small class="text-danger" *ngIf="errors?.role">{{errors.role}}</small>
+                    </div>
+    
+                    <button type="submit" class="btn btn-primary w-100"><a routerLink="/login">Signup</a></button>
+    
+                    <div class=" lo text-center mt-1">
+                        <p>Already have an account? <a routerLink="/login">login</a></p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+//ts
+
+import { Component, OnInit } from '@angular/core';
+
+@Component({
+  selector: 'app-signup',
+  templateUrl: './signup.component.html',
+  styleUrls: ['./signup.component.css']
+})
+export class SignupComponent implements OnInit {
+  formData = {
+    username:'',
+    email: '',
+    mobile:'',
+    password: '',
+    confirmPassword:'',
+    role:''
+  }
+
+  errors: any = {};
+
+  constructor() { }
+
+  ngOnInit(): void {
+    this.formData = {username:'', email: '', mobile:'', password: '', confirmPassword: '', role: ''};
+
+  }
+
+  validateField(fieldName: string, value: string){
+    if(fieldName === 'username'){
+      this.errors.username = !value
+       ? 'Username is required.'
+       : '';
+    }
+
+    if(fieldName === 'email'){
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      this.errors.email = !value
+        ? 'Email is required.'
+        : !emailPattern.test(value)
+        ? 'Invalid email format.'
+        : '';
+    }
+
+    if(fieldName === 'mobile'){
+      const phonePattern = /^[0-9]{10}$/;
+      this.errors.mobile = !value
+        ? 'Mobile is required.'
+        : !phonePattern.test(value)
+        ? 'Mobile number must be 10 digits.'
+        : '';
+    }
+
+    if(fieldName === 'password'){
+      this.errors.password = !value
+        ? 'Password is required.'
+        : value.length < 6
+        ? 'Password must be at least 6 characters.'
+        : '';
+    }
+
+    if(fieldName === 'confirmPassword'){
+      this.errors.confirmPassword = !value
+        ? 'Password is required.'
+        : value.length < 6
+        ? 'Password must be at least 6 characters.'
+        : '';
+    }
+
+    if(fieldName === 'role'){
+      this.errors.role = !value
+       ? 'UserRole is required'
+       : '';
+    }
+  }
+
+  handleSignup(){
+    this.validateField('username', this.formData.username);
+    this.validateField('email', this.formData.email);
+    this.validateField('mobile', this.formData.mobile);
+    this.validateField('password', this.formData.password);
+    this.validateField('confirmPassword', this.formData.confirmPassword);
+    this.validateField('role', this.formData.role);
+
+    if(this.errors.email || this.errors.password || this.errors.mobile || this.errors.username || this.errors.confirmPassword || this.errors.rolw) return;
+    
+    let nextId = 1;
+    while(localStorage.getItem(nextId.toString()) !== null){
+      nextId++;
+    }
+
+    localStorage.setItem(JSON.stringify(this.formData), JSON.stringify(this.formData.role));
+
+    console.log('Login form valid:', this.formData);
+
+    this.formData = {
+      username:'',
+      email: '',
+      mobile:'',
+      password: '',
+      confirmPassword:'',
+      role:''
+    }
+    
+  }
+
+}
+
+
+
+
+
